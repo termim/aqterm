@@ -1,0 +1,51 @@
+[build-system]
+requires = ['setuptools']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name        = 'aqterm'
+license     = {text = 'EPL-2.0 OR GPL-2.0-or-later'}
+description = 'AQTerm: PyQt/PySide based terminal emulator'
+readme      = 'README.rst'
+authors     = [{name = 'Mikhail Terekhov', email = 'termim@gmail.com'}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    'Environment :: X11 Applications :: Qt',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Terminals :: Terminal Emulators/X Terminals',
+    'Topic :: User Interfaces',
+]
+requires-python = '>= 3.10'
+dependencies    = [
+    'asyncssh',
+    'qasync',
+    'qtpy',
+    'PyQt6',
+    'typing_extensions >= 4.0.0',
+]
+dynamic = ['version']
+
+[project.optional-dependencies]
+pyside = ['PySide6']
+
+
+[project.urls]
+Homepage      = 'https://github.com/termim/aqterm'
+#Documentation = 'https://aqterm.readthedocs.io'
+Source        = 'https://github.com/termim/aqterm'
+Tracker       = 'https://github.com/termim/aqterm/issues'
+
+#[tool.setuptools.dynamic]
+#version = {attr = 'aqterm.version.__version__'}
+
+[tool.setuptools.packages.find]
+where = ['aqterm']
+
+[tool.setuptools.package-data]
+aqterm = ['py.typed']
