@@ -29,6 +29,7 @@ DEBUG = False
 
 
 class TerminalWidget(QtWidgets.QWidget):
+
     keymap = {
        QtCore.Qt.Key.Key_Backspace: chr(127),
        QtCore.Qt.Key.Key_Escape: chr(27),
@@ -57,7 +58,6 @@ class TerminalWidget(QtWidgets.QWidget):
        QtCore.Qt.Key.Key_F12:  "~l",
     }
 
-
     sessionClosed = QtCore.Signal()
 
 
@@ -68,7 +68,6 @@ class TerminalWidget(QtWidgets.QWidget):
         self.setAutoFillBackground(False)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
         self.setCursor(QtCore.Qt.CursorShape.IBeamCursor)
-        #logger.debug(f"{self.__class__.__name__}__init__")
         # Font
         font = QtGui.QFont("Monospace", 9)
         #font.setStyleStrategy(font.styleStrategy() | QtGui.QFont.ForceIntegerMetrics)
@@ -76,9 +75,8 @@ class TerminalWidget(QtWidgets.QWidget):
 
         #Session
         self.session = session
-        self.session.dataReceived.connect(self.on_session_readyRead)
-        #self.session.screenReady.connect(self.on_session_screenReady)
-        self.session.connectionLost.connect(self.on_session_finished)
+        self.session.dataReceived.connect(self.on_dataReceived)
+        self.session.sessionClosed.connect(self.on_sessionClosed)
 
         # Scroll
         self.scrollBar = QtWidgets.QScrollBar(self)
@@ -107,27 +105,26 @@ class TerminalWidget(QtWidgets.QWidget):
         self.terminal = Terminal(self._columns, self._rows)
         #self.old = b''
 
-    # ---------------- Signals
-    def on_session_finished(self, status):
+
+    def on_sessionClosed(self, status):
         self.session = None
         self.sessionClosed.emit()
 
-    def on_session_readyRead(self, data):
+
+    def on_dataReceived(self, data):
         self.terminal.write(data)
         # Read terminal response
         d = self.terminal.read()
         logger.debug(f"{d=}")
         dump = self.terminal.dump()
-        self.on_session_screenReady(dump)#self.session.dump())
-
-    def on_session_screenReady(self, data):
-        (self._cursor_col, self._cursor_row, scroll_up, scroll_down), screen = data
+        (self._cursor_col, self._cursor_row, scroll_up, scroll_down), screen = dump
         if scroll_up:
             self.store_history(scroll_up, self._screen)
         self._screen = screen
         self._update_cursor_rect()
         QtWidgets.QApplication.processEvents()
         self.update()
+
 
     def on_scrollBar_valueChanged(self, value):
         self._history_index = value
@@ -170,23 +167,11 @@ class TerminalWidget(QtWidgets.QWidget):
         self.session.write(d)
 
     def stop(self):
-        self.session.stop()
-
-    def pid(self):
-        return self.session.pid()
-
-    def info(self):
-        if self.is_alive():
-            return self.session.info()
+        self.session.close()
 
     def setFont(self, font):
         QtWidgets.QWidget.setFont(self, font)
         self._update_metrics()
-
-    def focusNextPrevChild(self, next):
-        if not self.is_alive():
-            return True
-        return False
 
     def focusInEvent(self, event):
         self.update()
@@ -202,8 +187,6 @@ class TerminalWidget(QtWidgets.QWidget):
         self.scrollBar.setGeometry(QtCore.QRect(self.width() - 16, 0, 16, self.height()))
 
     def closeEvent(self, event):
-        if not self.is_alive():
-            return
         self.session.close()
 
     def store_history(self, lines, screen):
@@ -520,6 +503,3 @@ class TerminalWidget(QtWidgets.QWidget):
         self._clipboard.setText(sel, QtGui.QClipboard.Selection)
 
         self.update()
-
-    def is_alive(self):
-        return self.session and self.session.is_alive()

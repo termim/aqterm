@@ -10,7 +10,7 @@ from qtpy import QtCore
 class SSHClientSession(QtCore.QObject, asyncssh.SSHClientSession):
 
     dataReceived = QtCore.Signal(object)
-    connectionLost = QtCore.Signal(object)
+    sessionClosed = QtCore.Signal(object)
     sendData = QtCore.Signal(object)
 
     def __init__(self, **kw):
@@ -43,7 +43,7 @@ class SSHClientSession(QtCore.QObject, asyncssh.SSHClientSession):
     def connection_lost(self, exc: Optional[Exception]) -> None:
         if exc:
             logging.error(f'SSH session error: {exc}')
-        self.connectionLost.emit(exc)
+        self.sessionClosed.emit(exc)
 
     def write(self, data):
         self._chan.write(data)#.encode())

@@ -1,5 +1,6 @@
 
 import asyncio
+import functools
 import sys
 from typing import Optional
 
@@ -26,40 +27,24 @@ class TabbedTerminal(QtWidgets.QTabWidget):
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setWindowTitle("Terminal")
-        self._terms = []
-        self.tabCloseRequested[int].connect(self._on_close_request)
-        self.currentChanged[int].connect(self._on_current_changed)
+        self.tabCloseRequested[int].connect(self.on_tabCloseRequested)
+        self.currentChanged[int].connect(self.on_currentChanged)
 
-    @asyncClose
-    async def closeEvent(self, event):  # noqa:N802
-        self.session.close()
 
-    def _on_close_request(self, idx):
+    def closeEvent(self, event):
+        for idx in range(self.count()):
+            self.widget(idx).close()
+
+
+    def on_tabCloseRequested(self, idx):
         term = self.widget(idx)
         term.stop()
 
-    def _on_current_changed(self, idx):
+
+    def on_currentChanged(self, idx):
         term = self.widget(idx)
         self._update_title(term)
 
-    @asyncSlot()
-    async def new_terminal(self):
-        # Create session
-        self.session = await SSHClientSession.create_session(
-                host='localhost',
-                program='/usr/bin/bash',
-                term_type='xterm-color',
-                term_size=(80, 24)
-            )
-        term = TerminalWidget(self.session, parent = self)
-        term.sessionClosed.connect(self.on_session_closed)
-        self.addTab(term, "Terminal")
-        self._terms.append(term)
-        self.setCurrentWidget(term)
-        term.setFocus()
-
-    def timerEvent(self, event):
-        self._update_title(self.currentWidget())
 
     def _update_title(self, term):
         if term is None:
@@ -70,18 +55,25 @@ class TabbedTerminal(QtWidgets.QTabWidget):
         self.setTabText(idx, title)
         self.setWindowTitle(title)
 
-    def on_session_closed(self):
-        term = self.sender()
-        try:
-            self._terms.remove(term)
-        except:
-            pass
-        self.removeTab(self.indexOf(term))
-        widget = self.currentWidget()
-        if widget:
-            widget.setFocus()
-        #if self.count() == 0:
-            #self.new_terminal()
+
+    @asyncSlot()
+    async def new_terminal(self):
+        # Create session
+        session = await SSHClientSession.create_session(
+                host='localhost',
+                program='/usr/bin/bash',
+                term_type='xterm-color',
+                term_size=(80, 24)
+            )
+        term = TerminalWidget(session, parent = self)
+        idx = self.addTab(term, "Terminal")
+        term.sessionClosed.connect(functools.partial(self.on_sessionClosed, idx))
+        self.setCurrentWidget(term)
+        term.setFocus()
+
+    def on_sessionClosed(self, idx):
+        self.removeTab(idx)
+
 
 
 def main():
