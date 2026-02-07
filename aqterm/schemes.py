@@ -4,6 +4,7 @@
 import os
 import glob
 import configparser
+from pathlib import Path
 
 from qtpy import QtGui
 
@@ -11,6 +12,7 @@ from .colortrans import SHORT2RGB_DICT
 
 
 class ColorScheme(object):
+
     SCHEMES = []
     CONFIG_KEYS = [ 'Background', 'BackgroundIntense',
                     'Color0', 'Color0Intense',
@@ -82,33 +84,54 @@ class ColorScheme(object):
 
 
     @classmethod
+    def list_schemes(cls, *, path=None, recursive=False):
+
+        if path is None:
+            path = Path(__file__).parent / "schemes"
+
+        pattern = "*.colorscheme"
+        if recursive:
+            pattern = "**/" + pattern
+
+        schemes = [ (_.stem, _) for _ in Path(path).glob(pattern) ]
+        return schemes
+
+
+    @classmethod
     def loadSchemes(cls, schemesPath):
         cls.SCHEMES.append(cls.default())
         for fileName in glob.glob(pathname=os.path.join(schemesPath, "*.colorscheme")):
-            config = configparser.RawConfigParser()
-            config.read(fileName)
-            general = dict(config.items("General"))
-            scheme = ColorScheme(general["description"])
-            for name in cls.CONFIG_KEYS:
-                index = -1
-                color = config.get(name, "Color")
-                if color.startswith("#"):
-                    color = QtGui.QColor(color)
-                elif color.index(",") != -1:
-                    rgb = "".join(["%02x" % int(v) for v in color.split(",")])
-                    color = QtGui.QColor("#" + rgb)
-                elif len(color) in [6, 8]:
-                    color = QtGui.QColor("#" + color)
-                else:
-                    color = QtGui.QColor()
-                intense = name.rfind("Intense")
-                if intense != -1:
-                    name = name[:intense]
-                if name.startswith("Color"):
-                    name, index = name[:-1], int(name[-1])
-                setter = getattr(scheme, "set%s" % name)
-                if index != -1:
-                    setter(index, color, intense != -1)
-                else:
-                    setter(color, intense != -1)
-            cls.SCHEMES.append(scheme)
+            schema = cls.load_schema(fileName)
+            cls.SCHEMES.append(schema)
+
+
+    @classmethod
+    def load_schema(cls, fname):
+
+        config = configparser.RawConfigParser()
+        config.read(fname)
+        general = dict(config.items("General"))
+        scheme = ColorScheme(general["description"])
+        for name in cls.CONFIG_KEYS:
+            index = -1
+            color = config.get(name, "Color")
+            if color.startswith("#"):
+                color = QtGui.QColor(color)
+            elif color.index(",") != -1:
+                rgb = "".join(["%02x" % int(v) for v in color.split(",")])
+                color = QtGui.QColor("#" + rgb)
+            elif len(color) in [6, 8]:
+                color = QtGui.QColor("#" + color)
+            else:
+                color = QtGui.QColor()
+            intense = name.rfind("Intense")
+            if intense != -1:
+                name = name[:intense]
+            if name.startswith("Color"):
+                name, index = name[:-1], int(name[-1])
+            setter = getattr(scheme, "set%s" % name)
+            if index != -1:
+                setter(index, color, intense != -1)
+            else:
+                setter(color, intense != -1)
+        return scheme

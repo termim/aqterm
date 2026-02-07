@@ -13,22 +13,50 @@ from aqterm.asyncsshsession import SSHClientSession
 from aqterm.terminal import TerminalWidget
 from aqterm.schemes import ColorScheme
 
-#ColorScheme.loadSchemes(os.path.abspath("schemes"))
+
+class MainWindow(QtWidgets.QMainWindow):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.terminals = TabbedTerminal(self)
+        self.setCentralWidget(self.terminals)
+
+        menu = QtWidgets.QMenu("&Options", self)
+        self.menuBar().addMenu(menu)
+        action_group = QtGui.QActionGroup(self, exclusive=True)
+        for name, path in ColorScheme.list_schemes():
+            action = action_group.addAction(name)
+            action.setCheckable(True)
+            action.triggered.connect(functools.partial(self.terminals.set_scheme, name, path))
+            menu.addAction(action)
 
 
 class TabbedTerminal(QtWidgets.QTabWidget):
+
     def __init__(self, parent=None):
         super(TabbedTerminal, self).__init__(parent)
+
+        self.setWindowTitle("Terminal")
         self.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
-        self._new_button = QtWidgets.QPushButton(self)
-        self._new_button.setText("New")
-        self._new_button.clicked.connect(self.new_terminal)
-        self.setCornerWidget(self._new_button)
         self.setTabsClosable(True)
         self.setMovable(True)
-        self.setWindowTitle("Terminal")
+
         self.tabCloseRequested[int].connect(self.on_tabCloseRequested)
         self.currentChanged[int].connect(self.on_currentChanged)
+
+        self._new_button = QtWidgets.QPushButton(self)
+        self._new_button.setText("New")
+        self._new_button.clicked.connect(self.createNewTerminal)
+        self.setCornerWidget(self._new_button)
+
+        self.color_schema = None
+
+
+    def set_scheme(self, name, path):
+
+        self.color_schema = ColorScheme.load_schema(path)
+        self.currentWidget().setColorScheme(self.color_schema)
 
 
     def closeEvent(self, event):
@@ -57,8 +85,10 @@ class TabbedTerminal(QtWidgets.QTabWidget):
 
 
     @asyncSlot()
-    async def new_terminal(self):
-        # Create session
+    async def createNewTerminal(self):
+        """
+        Create session
+        """
         session = await SSHClientSession.create_session(
                 host='localhost',
                 program='/usr/bin/bash',
@@ -66,12 +96,18 @@ class TabbedTerminal(QtWidgets.QTabWidget):
                 term_size=(80, 24)
             )
         term = TerminalWidget(session, parent = self)
+        if self.color_schema:
+            term.setColorScheme(self.color_schema)
         idx = self.addTab(term, "Terminal")
         term.sessionClosed.connect(functools.partial(self.on_sessionClosed, idx))
         self.setCurrentWidget(term)
         term.setFocus()
 
+
     def on_sessionClosed(self, idx):
+        """
+        Terminal session closed
+        """
         self.removeTab(idx)
 
 
@@ -83,18 +119,19 @@ def main():
     app_close_event = asyncio.Event()
     app.aboutToQuit.connect(app_close_event.set)
 
-    win = TabbedTerminal()
+    win = MainWindow()
     win.resize(800, 600)
     win.show()
 
     async def async_main():
-        #asyncio.create_task(win.new_terminal())
-        await win.new_terminal()
+        await win.terminals.createNewTerminal()
         await app_close_event.wait()
 
     # for 3.11 or older use qasync.run instead of asyncio.run
     qasync.run(async_main())
     #asyncio.run(async_main(), loop_factory=QEventLoop)
+
+
 
 if __name__ == "__main__":
     #import cProfile
