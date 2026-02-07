@@ -63,11 +63,13 @@ class TerminalWidget(QtWidgets.QWidget):
 
     def __init__(self, session, scheme = None, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
+
         self.parent().setTabOrder(self, self)
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.WheelFocus)
         self.setAutoFillBackground(False)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
         self.setCursor(QtCore.Qt.CursorShape.IBeamCursor)
+
         # Font
         font = QtGui.QFont("Monospace", 9)
         #font.setStyleStrategy(font.styleStrategy() | QtGui.QFont.ForceIntegerMetrics)
@@ -103,7 +105,6 @@ class TerminalWidget(QtWidgets.QWidget):
         self._clipboard = QtWidgets.QApplication.clipboard()
         self.updateGeometry()
         self.terminal = Terminal(self._columns, self._rows)
-        #self.old = b''
 
 
     def on_sessionClosed(self, status):
