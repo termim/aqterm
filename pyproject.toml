@@ -30,7 +30,7 @@ dependencies    = [
     'PyQt6',
     'typing_extensions >= 4.0.0',
 ]
-dynamic = ['version']
+#dynamic = ['version']
 
 [project.optional-dependencies]
 pyside = ['PySide6']
