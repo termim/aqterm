@@ -20,7 +20,7 @@ classifiers = [
     'Programming Language :: Python :: 3.13',
     'Topic :: Software Development :: Libraries :: Python Modules',
     'Topic :: Terminals :: Terminal Emulators/X Terminals',
-    'Topic :: User Interfaces',
+    'Topic :: Software Development :: User Interfaces',
 ]
 requires-python = '>= 3.10'
 dependencies    = [
