@@ -4,6 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name        = 'aqterm'
+version     =  "0.5"
 license     = {text = 'EPL-2.0 OR GPL-2.0-or-later'}
 description = 'AQTerm: PyQt/PySide based terminal emulator'
 readme      = 'README.rst'
