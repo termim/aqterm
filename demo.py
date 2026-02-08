@@ -7,7 +7,7 @@ from typing import Optional
 import qasync
 from qasync import QEventLoop, asyncClose, asyncSlot
 
-from qtpy import QtGui, QtCore, QtWidgets
+from qtpy import API_NAME, QtGui, QtCore, QtWidgets
 
 from aqterm.asyncsshsession import SSHClientSession
 from aqterm.terminal import TerminalWidget
@@ -22,14 +22,33 @@ class MainWindow(QtWidgets.QMainWindow):
         self.terminals = TabbedTerminal(self)
         self.setCentralWidget(self.terminals)
 
-        menu = QtWidgets.QMenu("&Options", self)
-        self.menuBar().addMenu(menu)
-        action_group = QtGui.QActionGroup(self, exclusive=True)
+        menu = self.menuBar().addMenu("&Options")
+
+        schema_menu = menu.addMenu("Color Schema")
+        action_group = QtGui.QActionGroup(self)
+        action_group.setExclusionPolicy(QtGui.QActionGroup.ExclusionPolicy.Exclusive)
         for name, path in ColorScheme.list_schemes():
             action = action_group.addAction(name)
             action.setCheckable(True)
             action.triggered.connect(functools.partial(self.terminals.set_scheme, name, path))
-            menu.addAction(action)
+            schema_menu.addAction(action)
+
+        self.font_action = QtWidgets.QAction("Font")
+        self.font_action.triggered.connect(self.selectFont)
+        menu.addAction(self.font_action)
+
+
+    def selectFont(self):
+
+        dialog = QtWidgets.QFontDialog()
+        dialog.setOption(QtWidgets.QFontDialog.FontDialogOption.MonospacedFonts, True)
+        font, ok = dialog.getFont()
+        if API_NAME in ["PySide2", "PySide6"]:
+            ok, font = font, ok
+
+        if ok:
+            self.terminals.currentWidget().setFont(font)
+
 
 
 class TabbedTerminal(QtWidgets.QTabWidget):
